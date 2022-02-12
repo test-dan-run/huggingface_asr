@@ -1,0 +1,31 @@
+version: '3.4'
+
+services:
+
+  local:
+    stdin_open: true
+    tty: true
+    image: huggingface_asr:v4.16.2
+    runtime: nvidia
+    ports:
+      - 8888:8888
+    environment:
+      NVIDIA_VISIBLE_DEVICES: 0
+    volumes:
+      - /home/daniel/projects/huggingface_asr:/vc
+      - /home/daniel/datasets:/datasets
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    shm_size: 16gb
+    command: jupyter notebook --allow-root --ip 0.0.0.0
+
+  tensorboard:
+    stdin_open: true
+    tty: true
+    image: huggingface_asr:v4.16.2
+    ports:
+      - 6006:6006
+    volumes:
+      - /home/daniel/projects/huggingface_asr/logs:/logs
+    command: tensorboard --logdir /logs --host 0.0.0.0 --port 6006

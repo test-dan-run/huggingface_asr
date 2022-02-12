@@ -1,0 +1,15 @@
+# huggingface asr required
+datasets==1.18.3
+transformers==4.16.2
+soundfile==0.10.3.post1
+jiwer==2.3.0
+
+# logging
+tensorboardX==2.4.1
+
+# jupyter utlities
+ipywidgets==7.6.5
+
+# cloud utilities
+clearml
+boto3
