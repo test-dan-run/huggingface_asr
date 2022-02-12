@@ -45,7 +45,7 @@ class TrainingConfig:
     per_device_train_batch_size=16
     gradient_accumulation_steps=2
     evaluation_strategy="steps"
-    num_train_epochs=30
+    num_train_epochs=100
     gradient_checkpointing=True
     fp16=True
     save_steps=400
@@ -53,5 +53,7 @@ class TrainingConfig:
     logging_steps=400
     learning_rate=3e-4
     warmup_steps=500
-    save_total_limit=2
+    load_best_model_at_end = True
+    metric_for_best_model = 'wer'
+    save_total_limit=1
     push_to_hub=False

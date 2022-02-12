@@ -126,6 +126,8 @@ def main():
         logging_steps = t_cfg.logging_steps,
         learning_rate = t_cfg.learning_rate,
         warmup_steps = t_cfg.warmup_steps,
+        load_best_model_at_end = t_cfg.load_best_model_at_end,
+        metric_for_best_model = t_cfg.metric_for_best_model,
         save_total_limit = t_cfg.save_total_limit,
         push_to_hub = t_cfg.push_to_hub,
     )
