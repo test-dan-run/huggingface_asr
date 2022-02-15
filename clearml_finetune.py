@@ -116,6 +116,7 @@ def main():
         output_dir = t_cfg.output_dir,
         group_by_length = t_cfg.group_by_length,
         per_device_train_batch_size = t_cfg.per_device_train_batch_size,
+        per_device_eval_batch_size = t_cfg.per_device_eval_batch_size,
         gradient_accumulation_steps = t_cfg.gradient_accumulation_steps,
         evaluation_strategy = t_cfg.evaluation_strategy,
         num_train_epochs = t_cfg.num_train_epochs,
@@ -129,6 +130,7 @@ def main():
         load_best_model_at_end = t_cfg.load_best_model_at_end,
         metric_for_best_model = t_cfg.metric_for_best_model,
         save_total_limit = t_cfg.save_total_limit,
+        dataloader_num_workers = t_cfg.dataloader_num_workers,
         push_to_hub = t_cfg.push_to_hub,
     )
 
