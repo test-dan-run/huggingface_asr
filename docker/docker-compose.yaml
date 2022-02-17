@@ -5,7 +5,7 @@ services:
   local:
     stdin_open: true
     tty: true
-    image: huggingface_asr:v4.16.2
+    image: dleongsh/huggingface_asr:v4.16.2
     runtime: nvidia
     ports:
       - 8888:8888

@@ -1,51 +1,46 @@
 # self-defined packages
-from config.hf_env import HF_AUTH_TOKEN
-from config.config import DatasetConfig as ds_cfg, \
-     ModelConfig as m_cfg, TrainingConfig as t_cfg
 from metrics import compute_metrics
 from dataloader import DataCollatorCTCWithPadding
-from dataset_utils import clean_dataset, generate_vocab_json, prepare_dataset
+from dataset_utils import generate_vocab_json, prepare_dataset
 
-from datasets import load_dataset, load_metric, Audio
+import os
+import pandas as pd
+from datasets import load_dataset, concatenate_datasets, load_metric, Audio
+from config.local_config import DatasetConfig as ds_cfg, \
+     ModelConfig as m_cfg, TrainingConfig as t_cfg
 from transformers import Trainer, TrainingArguments, \
      Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor, \
      Wav2Vec2Processor, Wav2Vec2ForCTC
 
 def main():
+    # combine csv files
+    train_datasets = []
+    for ds_name in ds_cfg.train_datasets.keys():
+        for split in ds_cfg.train_datasets[ds_name]['split'].split('+'):
+            df = pd.read_csv(os.path.join(ds_cfg.train_datasets[ds_name]['path'], split+'.csv'))
+            df['audio_filepath'] = df['audio_filepath'].apply(lambda x: os.path.join(ds_cfg.train_datasets[ds_name]['path'], x))
+            train_datasets.append(df)
+    train_dataset = pd.concat(train_datasets)
+    train_dataset.to_csv('train.csv')
+
+    test_datasets = []
+    for ds_name in ds_cfg.test_datasets.keys():
+        for split in ds_cfg.test_datasets[ds_name]['split'].split('+'):
+            df = pd.read_csv(os.path.join(ds_cfg.test_datasets[ds_name]['path'], split+'.csv'))
+            df['audio_filepath'] = df['audio_filepath'].apply(lambda x: os.path.join(ds_cfg.test_datasets[ds_name]['path'], x))
+            test_datasets.append(df)
+    test_dataset = pd.concat(test_datasets)
+    test_dataset.to_csv('test.csv')
+
     print('Loading Datasets...')
-    train_dataset = load_dataset(
-        ds_cfg.dataset_name,
-        ds_cfg.language,
-        split = 'train+validation',
-        use_auth_token=HF_AUTH_TOKEN,
-    )
-
-    test_dataset = load_dataset(
-        ds_cfg.dataset_name,
-        ds_cfg.language,
-        split = 'test',
-        use_auth_token=HF_AUTH_TOKEN,
-    )
-    print('Datasets loaded. Cleaning Dataset...')
-    train_dataset = clean_dataset(
-        train_dataset, 
-        ds_cfg.columns_to_remove,
-        ds_cfg.chars_to_remove, 
-        ds_cfg.chars_to_replace,
-    )
-
-    test_dataset = clean_dataset(
-        test_dataset, 
-        ds_cfg.columns_to_remove,
-        ds_cfg.chars_to_remove, 
-        ds_cfg.chars_to_replace,
-    )
-
-    train_dataset = train_dataset.cast_column('audio', Audio(sampling_rate=ds_cfg.sample_rate))
-    test_dataset = test_dataset.cast_column('audio', Audio(sampling_rate=ds_cfg.sample_rate))
+    train_dataset = load_dataset(path='.', split='train')
+    test_dataset = load_dataset(path='.', split='test')
+    
+    train_dataset = train_dataset.cast_column('audio_filepath', Audio(sampling_rate=ds_cfg.sample_rate))
+    test_dataset = test_dataset.cast_column('audio_filepath', Audio(sampling_rate=ds_cfg.sample_rate))
 
     print('Datasets cleaned.')
-    vocab_path = generate_vocab_json([train_dataset, test_dataset])
+    vocab_path = generate_vocab_json([train_dataset, test_dataset], 'text')
 
     print('Preparing Tokenizer...')
     tokenizer = Wav2Vec2CTCTokenizer(
@@ -102,6 +97,7 @@ def main():
         output_dir = t_cfg.output_dir,
         group_by_length = t_cfg.group_by_length,
         per_device_train_batch_size = t_cfg.per_device_train_batch_size,
+        per_device_eval_batch_size = t_cfg.per_device_eval_batch_size,
         gradient_accumulation_steps = t_cfg.gradient_accumulation_steps,
         evaluation_strategy = t_cfg.evaluation_strategy,
         num_train_epochs = t_cfg.num_train_epochs,
@@ -112,7 +108,10 @@ def main():
         logging_steps = t_cfg.logging_steps,
         learning_rate = t_cfg.learning_rate,
         warmup_steps = t_cfg.warmup_steps,
+        load_best_model_at_end = t_cfg.load_best_model_at_end,
+        metric_for_best_model = t_cfg.metric_for_best_model,
         save_total_limit = t_cfg.save_total_limit,
+        dataloader_num_workers = t_cfg.dataloader_num_workers,
         push_to_hub = t_cfg.push_to_hub,
     )
 

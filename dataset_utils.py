@@ -30,17 +30,17 @@ def clean_dataset(
     dataset = dataset.filter(remove_rows_with_brackets, input_columns=input_columns)
     return dataset
 
-def extract_all_chars(batch):
-  all_text = " ".join(batch["sentence"])
+def extract_all_chars(batch, column_name):
+  all_text = " ".join(batch[column_name])
   vocab = list(set(all_text))
   return {"vocab": [vocab], "all_text": [all_text]}
 
-def generate_vocab_json(datasets, output_path='vocab.json'):
+def generate_vocab_json(datasets, column_name, output_path='vocab.json'):
     print('Generating vocabulary of characters...')
     vocab_set = set()
     for dataset in datasets:
         vocab = dataset.map(
-            extract_all_chars, batched=True, batch_size=-1, 
+            lambda x: extract_all_chars(x, column_name), batched=True, batch_size=-1, 
             keep_in_memory=True, remove_columns=dataset.column_names
         )
         vocab_set.update(set(vocab['vocab'][0]))
@@ -60,12 +60,12 @@ def generate_vocab_json(datasets, output_path='vocab.json'):
     return output_path
 
 def prepare_dataset(batch, processor):
-    audio = batch["audio"]
+    audio = batch["audio_filepath"]
 
     # batched output is "un-batched"
     batch["input_values"] = processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_values[0]
     batch["input_length"] = len(batch["input_values"])
     
     with processor.as_target_processor():
-        batch["labels"] = processor(batch["sentence"]).input_ids
+        batch["labels"] = processor(batch["text"]).input_ids
     return batch

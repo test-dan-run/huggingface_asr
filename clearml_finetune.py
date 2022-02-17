@@ -1,5 +1,5 @@
 
-from clearml import Task
+from clearml import Task, Dataset
 from config.hf_env import HF_AUTH_TOKEN
 from config.config import ClearMLConfig as c_cfg
 
@@ -14,9 +14,10 @@ task.execute_remotely(queue_name=c_cfg.queue_name, clone=False, exit_process=Tru
 # self-defined packages
 from metrics import compute_metrics
 from dataloader import DataCollatorCTCWithPadding
-from dataset_utils import clean_dataset, generate_vocab_json, prepare_dataset
+from dataset_utils import generate_vocab_json, prepare_dataset
 
 import os
+from transformers.integrations import TensorBoardCallback
 from datasets import load_dataset, load_metric, Audio
 from config.config import DatasetConfig as ds_cfg, \
      ModelConfig as m_cfg, TrainingConfig as t_cfg
@@ -25,41 +26,21 @@ from transformers import Trainer, TrainingArguments, \
      Wav2Vec2Processor, Wav2Vec2ForCTC
 
 def main():
+    print('Downloading Dataset from S3 via ClearML...')
+    dataset = Dataset.get(dataset_project=ds_cfg.dataset_project, dataset_name=ds_cfg.dataset_name)
+    dataset_path = dataset.get_local_copy()
+
     print('Loading Datasets...')
-    train_dataset = load_dataset(
-        ds_cfg.dataset_name,
-        ds_cfg.language,
-        split = 'train+validation',
-        use_auth_token=os.environ.get('HF_AUTH_TOKEN')
-    )
+    train_dataset = load_dataset(dataset_path, split = 'train+validation')
+    train_dataset = train_dataset.map(lambda x: {'audio_filepath': os.path.join(dataset_path, x['audio_filepath'])})
+    train_dataset = train_dataset.cast_column('audio_filepath', Audio(sampling_rate=ds_cfg.sample_rate))
 
-    test_dataset = load_dataset(
-        ds_cfg.dataset_name,
-        ds_cfg.language,
-        split = 'test',
-        use_auth_token=os.environ.get('HF_AUTH_TOKEN')
-    )
-
-    print('Datasets loaded. Cleaning Datasets...')
-    train_dataset = clean_dataset(
-        train_dataset, 
-        ds_cfg.columns_to_remove,
-        ds_cfg.chars_to_remove, 
-        ds_cfg.chars_to_replace,
-    )
-
-    test_dataset = clean_dataset(
-        test_dataset, 
-        ds_cfg.columns_to_remove,
-        ds_cfg.chars_to_remove, 
-        ds_cfg.chars_to_replace,
-    )
-
-    train_dataset = train_dataset.cast_column('audio', Audio(sampling_rate=ds_cfg.sample_rate))
-    test_dataset = test_dataset.cast_column('audio', Audio(sampling_rate=ds_cfg.sample_rate))
+    test_dataset = load_dataset(dataset_path, split = 'test')
+    test_dataset = test_dataset.map(lambda x: {'audio_filepath': os.path.join(dataset_path, x['audio_filepath'])})
+    test_dataset = test_dataset.cast_column('audio_filepath', Audio(sampling_rate=ds_cfg.sample_rate))
 
     print('Datasets cleaned.')
-    vocab_path = generate_vocab_json([train_dataset, test_dataset])
+    vocab_path = generate_vocab_json([train_dataset, test_dataset], column_name='audio_filepath')
 
     print('Preparing Tokenizer...')
     tokenizer = Wav2Vec2CTCTokenizer(
@@ -105,6 +86,7 @@ def main():
         mask_time_prob = m_cfg.mask_time_prob,
         layerdrop = m_cfg.layerdrop,
         ctc_loss_reduction = m_cfg.ctc_loss_reduction, 
+        ctc_zero_infinity = m_cfg.ctc_zero_infinity,
         pad_token_id = processor.tokenizer.pad_token_id,
         vocab_size = len(processor.tokenizer),
     )
@@ -142,6 +124,7 @@ def main():
         train_dataset = train_dataset,
         eval_dataset = test_dataset,
         tokenizer = processor.feature_extractor,
+        tb_writer = TensorBoardCallback()
     )
 
     trainer.train()
