@@ -1,6 +1,5 @@
 
 from clearml import Task, Dataset
-from config.hf_env import HF_AUTH_TOKEN
 from config.config import ClearMLConfig as c_cfg
 
 task = Task.init(
@@ -8,7 +7,7 @@ task = Task.init(
     task_name=c_cfg.task_name, 
     output_uri=c_cfg.output_uri, 
     task_type=c_cfg.task_type)
-task.set_base_docker(f'{c_cfg.base_docker} --env HF_AUTH_TOKEN={HF_AUTH_TOKEN}')
+task.set_base_docker(c_cfg.base_docker)
 task.execute_remotely(queue_name=c_cfg.queue_name, clone=False, exit_process=True)
 
 # self-defined packages
