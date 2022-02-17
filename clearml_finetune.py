@@ -111,6 +111,7 @@ def main():
         warmup_steps = t_cfg.warmup_steps,
         load_best_model_at_end = t_cfg.load_best_model_at_end,
         metric_for_best_model = t_cfg.metric_for_best_model,
+        greater_is_better = t_cfg.greater_is_better,
         save_total_limit = t_cfg.save_total_limit,
         dataloader_num_workers = t_cfg.dataloader_num_workers,
         push_to_hub = t_cfg.push_to_hub,

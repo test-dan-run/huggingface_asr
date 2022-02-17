@@ -1,6 +1,6 @@
 class ClearMLConfig:
     project_name = 'e2e-selfsupervised-asr/xlsr-finetune'
-    task_name = 'commonvoice_id_v8.0_dropout'
+    task_name = 'cv_magichub'
     output_uri = 's3://experiment-logging/storage'
     task_type = 'training'
     tags = ['Wav2Vec2', 'Not Fairseq']
@@ -46,6 +46,7 @@ class TrainingConfig:
     warmup_steps=1000
     load_best_model_at_end = True
     metric_for_best_model = 'wer'
+    greater_is_better = False
     dataloader_num_workers = 8
     save_total_limit=1
     push_to_hub=False
