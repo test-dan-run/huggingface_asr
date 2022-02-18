@@ -41,8 +41,9 @@ def generate_vocab_json(datasets, column_name, output_path='vocab.json'):
     for dataset in datasets:
         vocab = dataset.map(
             lambda x: extract_all_chars(x, column_name), batched=True, batch_size=-1, 
-            keep_in_memory=True, remove_columns=dataset.column_names
+            keep_in_memory=True, remove_columns=['audio_filepath', 'text', 'gender', 'duration']
         )
+        print(vocab)
         vocab_set.update(set(vocab['vocab'][0]))
     vocab_dict = {v: k for k, v in enumerate(sorted(list(vocab_set)))}
     vocab_dict['|'] = vocab_dict[' ']

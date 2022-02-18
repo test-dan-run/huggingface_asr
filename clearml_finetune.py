@@ -2,6 +2,7 @@
 from clearml import Task, Dataset
 from config.config import ClearMLConfig as c_cfg
 
+Task.add_requirements('librosa')
 task = Task.init(
     project_name=c_cfg.project_name, 
     task_name=c_cfg.task_name, 
@@ -30,16 +31,16 @@ def main():
     dataset_path = dataset.get_local_copy()
 
     print('Loading Datasets...')
-    train_dataset = load_dataset(dataset_path, split = 'train+validation')
+    train_dataset = load_dataset('csv', data_files=[os.path.join(dataset_path, 'train.csv'), os.path.join(dataset_path, 'validation.csv')], split='train')
     train_dataset = train_dataset.map(lambda x: {'audio_filepath': os.path.join(dataset_path, x['audio_filepath'])})
     train_dataset = train_dataset.cast_column('audio_filepath', Audio(sampling_rate=ds_cfg.sample_rate))
 
-    test_dataset = load_dataset(dataset_path, split = 'test')
+    test_dataset = load_dataset('csv', data_files=os.path.join(dataset_path, 'test.csv'), split='train')
     test_dataset = test_dataset.map(lambda x: {'audio_filepath': os.path.join(dataset_path, x['audio_filepath'])})
     test_dataset = test_dataset.cast_column('audio_filepath', Audio(sampling_rate=ds_cfg.sample_rate))
 
     print('Datasets cleaned.')
-    vocab_path = generate_vocab_json([train_dataset, test_dataset], column_name='audio_filepath')
+    vocab_path = generate_vocab_json([train_dataset, test_dataset], column_name='text')
 
     print('Preparing Tokenizer...')
     tokenizer = Wav2Vec2CTCTokenizer(
@@ -124,7 +125,7 @@ def main():
         train_dataset = train_dataset,
         eval_dataset = test_dataset,
         tokenizer = processor.feature_extractor,
-        tb_writer = TensorBoardCallback()
+        callbacks = [TensorBoardCallback(),]
     )
 
     trainer.train()
